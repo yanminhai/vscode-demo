@@ -3,14 +3,14 @@ vscode 运行 命令
 执行完毕后执行  .\scripts\code
 打包二进制文件
 window打包命令
- npm run gulp vscode-win32-x64
+npm run gulp vscode-win32-x64
 window 最小化版本
 npm run gulp vscode-win32-x64-min
 linux 打包命令
- npm run gulp vscode-linux-arm64
+npm run gulp vscode-linux-arm64
 linux 最小化版本
 npm run gulp vscode-linux-arm64-min
 mac 打包命令
 npm run gulp vscode-darwin-arm64
 mac 最小化版本
-npm run gulp vscode-darwin-arm64
+npm run gulp vscode-darwin-arm64-min
