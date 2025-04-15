@@ -144,7 +144,7 @@ class CodeMain {
 					evt.join('instanceLockfile', promises.unlink(environmentMainService.mainLockfile).catch(() => { /* ignored */ }));
 				});
 
-				return instantiationService.createInstance(CodeApplication, mainProcessNodeIpcServer, instanceEnvironment).startup(false, '');
+				return instantiationService.createInstance(CodeApplication, mainProcessNodeIpcServer, instanceEnvironment).startup(false);
 			});
 		} catch (error) {
 			instantiationService.invokeFunction(this.quit, error);
