@@ -527,7 +527,7 @@ export class CodeApplication extends Disposable {
 	}
 
 
-	public async startup(iscode: boolean, data: StartData): Promise<void> {
+	public async startup(iscode: boolean, data?: StartData): Promise<void> {
 		if (!iscode) {
 			this.logService.debug('Starting VS Code');
 			this.logService.debug(`from: ${this.environmentMainService.appRoot}`);
@@ -1255,17 +1255,17 @@ export class CodeApplication extends Disposable {
 		mainProcessElectronServer.registerChannel(ipcUtilityProcessWorkerChannelName, utilityProcessWorkerChannel);
 	}
 
-	private async openFirstWindow(data: StartData, accessor: ServicesAccessor, initialProtocolUrls: IInitialProtocolUrls | undefined): Promise<ICodeWindow[]> {
+	private async openFirstWindow(data: StartData | undefined, accessor: ServicesAccessor, initialProtocolUrls: IInitialProtocolUrls | undefined): Promise<ICodeWindow[]> {
 		const windowsMainService = this.windowsMainService = accessor.get(IWindowsMainService);
 		this.auxiliaryWindowsMainService = accessor.get(IAuxiliaryWindowsMainService);
 		let DEFAULT_PATH;
 		let IS_File = true;
-		if (data.type == "folder") {
+		if (data?.type == "folder") {
 			IS_File = false;
-			DEFAULT_PATH = data.path ? data.path : 'D://workspace//work//electronapp//src//main.js'
+			DEFAULT_PATH = data?.path ? data.path : 'D://workspace//work//electronapp//src//main.js'
 		} else {
 			IS_File = true;
-			DEFAULT_PATH = data.path ? data.path : 'D://workspace//work//electronapp'
+			DEFAULT_PATH = data?.path ? data.path : 'D://workspace//work//electronapp'
 		}
 
 		const context = isLaunchedFromCli(process.env) ? OpenContext.CLI : OpenContext.DESKTOP;
