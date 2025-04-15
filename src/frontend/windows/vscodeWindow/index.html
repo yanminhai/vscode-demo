@@ -121,12 +121,21 @@
 				<button  id="selectFolderBtn">
 					选择文件夹
 				</button>
-
+				<button  id="selectFileBtn">
+					选择文件
+				</button>
 				<div id="pathDisplay">尚未选择文件夹</div>
 
 				<button id="startBtn" >
 					启动
 				</button>
+				<button id="isShow">
+					显示/隐藏
+				</button>
+				<!-- <label class="switch">
+					<input type="checkbox" id="toggle">
+					<span class="slider round"></span>
+				</label> -->
 			</div>
 			<!-- <label>
 				<input type="file" webkitdirectory>	选择项目目录
@@ -141,11 +150,12 @@
 	<script>
 
 		function updateNow() {
-			console.log('sssssssssssss');
-			window.electronAPI?.sendMessage("update-now", {});
+			window.electronAPI?.sendMessage("open-vscode", {type:"file",path:'D:/workspace/electronapp/src/main.js'});
 		}
         // 存储选中路径的变量
         let selectedFolderPath = '';
+		let isShow=false;
+		let type='';
 // 		window.electronAPI?.onMessage('getFeedbackPopover', (e, data)=> {
 //   feedbackPopover.value = data
 // })
@@ -154,27 +164,52 @@ window.electronAPI?.onMessage('selected-directory',(event, path) => {
   console.log('Received path:', path)
   			if (path) {
                 selectedFolderPath = path;
+				type="folder"
                 document.getElementById('pathDisplay').textContent =
                     `已选择文件夹：${selectedFolderPath}`;
             }
 })
-     // 选择文件夹按钮点击事件
+window.electronAPI?.onMessage('selected-File',(event, path) => {
+  console.log('Received File path:', path)
+  			if (path) {
+				type="file"
+                selectedFolderPath = path;
+                document.getElementById('pathDisplay').textContent =
+                    `已选择文件：${selectedFolderPath}`;
+            }
+})
+
+     // 选择文件夹按钮点击事件 opem-openFile-dialog
 	 document.getElementById('selectFolderBtn').addEventListener('click', () => {
 		window.electronAPI?.sendMessage('open-directory-dialog',{})
-            // ipcRenderer.send('open-directory-dialog');
         });
-
+		document.getElementById('selectFileBtn').addEventListener('click', () => {
+		window.electronAPI?.sendMessage('opem-openFile-dialog',{})
+        });
        // 启动按钮点击事件
 	   document.getElementById('startBtn').addEventListener('click', () => {
             if (selectedFolderPath) {
                 // alert(`完整路径：\n${selectedFolderPath}`);
 				console.log(`完整路径：\n${selectedFolderPath}`)
-				window.electronAPI?.sendMessage("update-now", {path:selectedFolderPath});
-
+ 				window.electronAPI?.sendMessage("open-vscode", {type:type,path:selectedFolderPath});
+				isShow=true;
             } else {
                 alert('请先选择文件夹！');
             }
         });
+       // 启动按钮点击事件
+	   document.getElementById('isShow').addEventListener('click', () => {
+		console.log("isShow-init=")
+		if(isShow){
+			isShow=false;
+		}else{
+			isShow=true;
+		}
+		console.log("isShow-vscode="+isShow)
+
+			window.electronAPI?.sendMessage("isShow-vscode",isShow);
+        });
+
         // document.getElementById('folderInput').addEventListener('change', function(e) {
         //     const files = e.target.files;
         //      if (files.length > 0) {

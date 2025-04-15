@@ -14,3 +14,4 @@ mac 打包命令
 npm run gulp vscode-darwin-arm64
 mac 最小化版本
 npm run gulp vscode-darwin-arm64-min
+

@@ -45,7 +45,7 @@ import { ILoggerMainService } from '../../log/electron-main/loggerService.js';
 import { IInstantiationService } from '../../instantiation/common/instantiation.js';
 import { VSBuffer } from '../../../base/common/buffer.js';
 import { errorHandler } from '../../../base/common/errors.js';
-import { getDesktopWindow } from '../../../../frontend/modules/mainWindowsUtiles.js'
+import { getDesktopWindow, setVscodepWindow } from '../../../../frontend/modules/mainWindowsUtiles.js'
 export interface IWindowCreationOptions {
 	readonly state: IWindowState;
 	readonly extensionDevelopmentPath?: string[];
@@ -261,7 +261,9 @@ export abstract class BaseWindow extends Disposable implements IBaseWindow {
 			this._win?.show();
 		}
 		this._win?.setParentWindow(getDesktopWindow());
-
+		if (this._win) {
+			setVscodepWindow(this._win);
+		}
 		const primaryDisplay = screen.getPrimaryDisplay();
 		const { workArea } = primaryDisplay;
 		this._win?.setBounds({

@@ -123,7 +123,7 @@ import { IWebContentExtractorService } from '../../platform/webContentExtractor/
 import { NativeWebContentExtractorService } from '../../platform/webContentExtractor/electron-main/webContentExtractorService.js';
 import ErrorTelemetry from '../../platform/telemetry/electron-main/errorTelemetry.js';
 import { createDesktopWindow, createUpdateWindow } from '../../../frontend/modules/mainWindowsUtiles.js'
-
+import { StartData } from '../../../frontend/common/StartUpData.js'
 /**
  * The main VS Code application. There will only ever be one instance,
  * even if the user starts many instances (e.g. from the command line).
@@ -527,7 +527,7 @@ export class CodeApplication extends Disposable {
 	}
 
 
-	public async startup(iscode: boolean, path: string): Promise<void> {
+	public async startup(iscode: boolean, data: StartData): Promise<void> {
 		if (!iscode) {
 			this.logService.debug('Starting VS Code');
 			this.logService.debug(`from: ${this.environmentMainService.appRoot}`);
@@ -613,7 +613,7 @@ export class CodeApplication extends Disposable {
 		// 	return;
 		// }
 		// Open Windows
-		await appInstantiationService.invokeFunction(accessor => this.openFirstWindow(path, accessor, initialProtocolUrls));
+		await appInstantiationService.invokeFunction(accessor => this.openFirstWindow(data, accessor, initialProtocolUrls));
 
 
 		// this.logService.trace(`bbbbbbb=============`);
@@ -1255,20 +1255,26 @@ export class CodeApplication extends Disposable {
 		mainProcessElectronServer.registerChannel(ipcUtilityProcessWorkerChannelName, utilityProcessWorkerChannel);
 	}
 
-	private async openFirstWindow(path: string, accessor: ServicesAccessor, initialProtocolUrls: IInitialProtocolUrls | undefined): Promise<ICodeWindow[]> {
+	private async openFirstWindow(data: StartData, accessor: ServicesAccessor, initialProtocolUrls: IInitialProtocolUrls | undefined): Promise<ICodeWindow[]> {
 		const windowsMainService = this.windowsMainService = accessor.get(IWindowsMainService);
 		this.auxiliaryWindowsMainService = accessor.get(IAuxiliaryWindowsMainService);
-		let DEFAULT_PROJECT_PATH;
-		DEFAULT_PROJECT_PATH = path ? path : 'D://workspace//work//electronapp '
-		const context = isLaunchedFromCli(process.env) ? OpenContext.CLI : OpenContext.DESKTOP;
-		const DEFAULT_FILE_PATH = 'D://workspace//work//electronapp//src//main.js'
+		let DEFAULT_PATH;
+		let IS_File = true;
+		if (data.type == "folder") {
+			IS_File = false;
+			DEFAULT_PATH = data.path ? data.path : 'D://workspace//work//electronapp//src//main.js'
+		} else {
+			IS_File = true;
+			DEFAULT_PATH = data.path ? data.path : 'D://workspace//work//electronapp'
+		}
 
+		const context = isLaunchedFromCli(process.env) ? OpenContext.CLI : OpenContext.DESKTOP;
+		// const DEFAULT_FILE_PATH =
 		const args = this.environmentMainService.args;
 		const urisToOpen = [
 			{
-				folderUri: URI.file(DEFAULT_FILE_PATH),
-				// type: 'folder'
-				type: 'file'
+				folderUri: URI.file(DEFAULT_PATH),
+				type: IS_File ? 'file' : 'folder'
 			}
 		];
 		// First check for windows from protocol links to open

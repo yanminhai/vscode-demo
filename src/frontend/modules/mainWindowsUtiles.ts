@@ -14,11 +14,13 @@ import { getUpdateInfo, openClient, closeClient } from '../appUpdate/updateUtils
 import { createServer, closeServer } from '../server/http.js';
 import { runupdate, execExeFile } from '../appUpdate/appUpdate.js';
 import { CodeApplication } from '../../vs/code/electron-main/app.js';
-
+import { boolean } from '../../vs/editor/common/config/editorOptions.js';
+import { StartData } from '../common/StartUpData.js'
 let desktopWindow: BrowserWindow | null = null;
 let updateWindow: BrowserWindow | null = null;
 let mCodeApp: CodeApplication | null = null;
 let isQuitting: boolean = false;
+let vscodeWindow: BrowserWindow;
 const env_test: boolean = true;
 
 interface IPCChannels {
@@ -31,20 +33,18 @@ interface LoginData {
 	operNo: string;
 	token: string;
 }
-interface StartData {
-	path: string;
-}
+
 interface NullData {
 }
 
 export const createDesktopWindow = (codeApp: CodeApplication): void => {
 	mCodeApp = codeApp;
 	createServer();
-	if (env_test) {
-		setBaseURL('http://158.1.82.97:9203');
-	} else {
-		setBaseURL('http://158.1.82.97:9203');
-	}
+	// if (env_test) {
+	// 	setBaseURL('http://158.1.82.97:9203');
+	// } else {
+	// 	setBaseURL('http://158.1.82.97:9203');
+	// }
 	// 获取主显示器的可用区域（排除系统任务栏）
 	const primaryDisplay = screen.getPrimaryDisplay();
 	const { width, height } = primaryDisplay.workArea; // workArea 是正确的属性
@@ -93,7 +93,7 @@ export const createDesktopWindow = (codeApp: CodeApplication): void => {
 		});
 		setupIPC();
 		// desktopWindow?.webContents?.reloadIgnoringCache();
-		desktopWindow.loadURL("http://localhost:5173/");
+		// desktopWindow.loadURL("http://localhost:5173/");
 
 		// desktopWindow.loadFile(FileAccess.asFileUri('frontend/windows/updateWindow').fsPath);
 		// 获取当前文件的 __dirname
@@ -104,7 +104,7 @@ export const createDesktopWindow = (codeApp: CodeApplication): void => {
 		// desktopWindow.loadURL(`file://${path.join(__dirname, '../windows/updateWindows/index.html')}`);
 
 		// desktopWindow.loadFile(path.join(__dirname, '../windows/updateWindows/index.html'));
-		// desktopWindow.loadURL(FileAccess.asBrowserUri(`frontend/windows/vscodeWindow/index.html`).toString(true));
+		desktopWindow.loadURL(FileAccess.asBrowserUri(`frontend/windows/vscodeWindow/index.html`).toString(true));
 		// desktopWindow.maximize();
 		// 处理显示变化
 		screen.on('display-metrics-changed', () => {
@@ -264,8 +264,10 @@ try {
 const setupIPC = (): void => {
 	ipcMain.on('login' as keyof IPCChannels, handleLogin as any);
 	ipcMain.on('update-now' as keyof IPCChannels, handleUpdate as any);
+	ipcMain.on('open-vscode' as keyof IPCChannels, handleOpenVscode as any);
 	ipcMain.on('open-directory-dialog' as keyof IPCChannels, openDirectory as any);
-
+	ipcMain.on('opem-openFile-dialog' as keyof IPCChannels, openFile as any)
+	ipcMain.on('isShow-vscode' as keyof IPCChannels, isVSCodeShow as any)
 };
 
 
@@ -289,7 +291,18 @@ const handleUpdate = async (
 	log.info('========立即重启更新');
 	// runupdate();
 
-	await mCodeApp?.startup(true, data?.path);
+	await mCodeApp?.startup(true, data);
+
+};
+//立即启动
+const handleOpenVscode = async (
+	event: IpcMainEvent,
+	data: StartData
+): Promise<void> => {
+	// runupdate();
+	log.info('========启动vscode');
+
+	await mCodeApp?.startup(true, data);
 
 };
 const openDirectory = async (
@@ -302,9 +315,42 @@ const openDirectory = async (
 			event.sender.send('selected-directory', result.filePaths[0]);
 		}
 	})
-	log.info('========选择路径');
+	// runupdate();
+
+};
+const openFile = async (
+	event: IpcMainEvent, nullData: NullData
+): Promise<void> => {
+	dialog.showOpenDialog({
+		properties: ['openFile']
+	}).then(result => {
+		if (!result.canceled && result.filePaths.length > 0) {
+			event.sender.send('selected-File', result.filePaths[0]);
+		}
+	})
+}
+const isVSCodeShow = async (
+	event: IpcMainEvent, isShow: boolean
+): Promise<void> => {
+	console.log("=========", isShow)
+	if (isShow) {
+		vscodeWindow.show()
+	} else {
+		vscodeWindow.hide()
+	}
+	// dialog.showOpenDialog({
+	// 	properties: ['openDirectory']
+	// }).then(result => {
+	// 	if (!result.canceled && result.filePaths.length > 0) {
+	// 		event.sender.send('selected-directory', result.filePaths[0]);
+	// 	}
+	// })
+	// log.info('========选择路径');
 	// runupdate();
 
 };
 // 添加窗口管理函数
 export const getDesktopWindow = (): BrowserWindow | null => desktopWindow;
+export const setVscodepWindow = (window: BrowserWindow): void => {
+	vscodeWindow = window;
+};
