@@ -92,8 +92,9 @@ export const createDesktopWindow = (codeApp: CodeApplication): void => {
 			desktopWindow!.loadURL(url); // 允许加载任意 URL
 		});
 		setupIPC();
+		desktopWindow.setMaximizable(true)
 		// desktopWindow?.webContents?.reloadIgnoringCache();
-		// desktopWindow.loadURL("http://localhost:5173/");
+		desktopWindow.loadURL("http://localhost:5173/");
 
 		// desktopWindow.loadFile(FileAccess.asFileUri('frontend/windows/updateWindow').fsPath);
 		// 获取当前文件的 __dirname
@@ -104,11 +105,12 @@ export const createDesktopWindow = (codeApp: CodeApplication): void => {
 		// desktopWindow.loadURL(`file://${path.join(__dirname, '../windows/updateWindows/index.html')}`);
 
 		// desktopWindow.loadFile(path.join(__dirname, '../windows/updateWindows/index.html'));
-		desktopWindow.loadURL(FileAccess.asBrowserUri(`frontend/windows/vscodeWindow/index.html`).toString(true));
+		// desktopWindow.loadURL(FileAccess.asBrowserUri(`frontend/windows/vscodeWindow/index.html`).toString(true));
 		// desktopWindow.maximize();
 		// 处理显示变化
 		screen.on('display-metrics-changed', () => {
 			const newDisplay = screen.getPrimaryDisplay();
+
 			desktopWindow?.setBounds(newDisplay.workArea);
 		})
 		// desktopWindow.loadURL();
@@ -120,7 +122,7 @@ export const createDesktopWindow = (codeApp: CodeApplication): void => {
 	} catch (error) {
 		console.error('窗口初始化失败:', error instanceof Error ? error.message : String(error));
 	}
-	desktopWindow.webContents.openDevTools();
+	// desktopWindow.webContents.openDevTools();
 
 	app.on('before-quit', async (event: Event) => {
 		if (!isQuitting) {
