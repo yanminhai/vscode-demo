@@ -268,8 +268,10 @@ const setupIPC = (): void => {
 	ipcMain.on('update-now' as keyof IPCChannels, handleUpdate as any);
 	ipcMain.on('open-vscode' as keyof IPCChannels, handleOpenVscode as any);
 	ipcMain.on('open-directory-dialog' as keyof IPCChannels, openDirectory as any);
-	ipcMain.on('opem-openFile-dialog' as keyof IPCChannels, openFile as any)
-	ipcMain.on('isShow-vscode' as keyof IPCChannels, isVSCodeShow as any)
+	ipcMain.on('opem-openFile-dialog' as keyof IPCChannels, openFile as any);
+	ipcMain.on('isShow-vscode' as keyof IPCChannels, isVSCodeShow as any);
+	ipcMain.on('close-window' as keyof IPCChannels, handleCloseWindow as any);
+
 };
 
 
@@ -331,26 +333,24 @@ const openFile = async (
 		}
 	})
 }
-const isVSCodeShow = async (
-	event: IpcMainEvent, isShow: boolean
+const handleCloseWindow = async (
+	event: IpcMainEvent, nullData: NullData
 ): Promise<void> => {
-	console.log("=========", isShow)
-	if (isShow) {
-		vscodeWindow.show()
-	} else {
-		vscodeWindow.hide()
-	}
-	// dialog.showOpenDialog({
-	// 	properties: ['openDirectory']
-	// }).then(result => {
-	// 	if (!result.canceled && result.filePaths.length > 0) {
-	// 		event.sender.send('selected-directory', result.filePaths[0]);
-	// 	}
-	// })
-	// log.info('========选择路径');
-	// runupdate();
-
+	console.log("关闭窗口=========")
+	vscodeWindow.setClosable(true)
+	vscodeWindow.close();
 };
+const isVSCodeShow
+	= async (
+		event: IpcMainEvent, isShow: boolean
+	): Promise<void> => {
+		console.log("=========", isShow)
+		if (isShow) {
+			vscodeWindow.show()
+		} else {
+			vscodeWindow.hide()
+		}
+	};
 // 添加窗口管理函数
 export const getDesktopWindow = (): BrowserWindow | null => desktopWindow;
 export const setVscodepWindow = (window: BrowserWindow): void => {
