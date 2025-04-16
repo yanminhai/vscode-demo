@@ -336,7 +336,6 @@ const openFile = async (
 const handleCloseWindow = async (
 	event: IpcMainEvent, nullData: NullData
 ): Promise<void> => {
-	console.log("关闭窗口=========")
 	vscodeWindow.setClosable(true)
 	vscodeWindow.close();
 };
@@ -344,7 +343,6 @@ const isVSCodeShow
 	= async (
 		event: IpcMainEvent, isShow: boolean
 	): Promise<void> => {
-		console.log("=========", isShow)
 		if (isShow) {
 			vscodeWindow.show()
 		} else {
