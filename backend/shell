@@ -1,0 +1,16 @@
+	
+
+for model in \
+   claude-3-5-sonnet-20240620 \
+   gpt-4o-2024-05-13 \
+   gpt-4-turbo-2024-04-09 \
+   gpt_4_vision \
+   gpt-4o-2024-11-20 \
+   claude_3_sonnet; do
+   ollama cp deepseek-coder:latest $model
+done
+
+for model in \
+   gpt-4o-2024-11-20; do
+   ollama cp llama3.2-vision:latest $model
+done

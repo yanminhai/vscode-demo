@@ -3,29 +3,42 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 const gulp = require('gulp');
+const path = require('path');
+const fs = require('fs');
+const util = require('./lib/util');
+const task = require('./lib/task');
+const { getVersion } = require('./lib/getVersion');
+const { readISODate } = require('./lib/date');
+const { inlineMeta } = require('./lib/inlineMeta');
+const { getProductionDependencies } = require('./lib/dependencies');
+const { config } = require('./lib/electron');
+const { createAsar } = require('./lib/asar');
+const { promisify } = require('util');
+const { glob } = require('glob');
+const { buildBackendTask, packageBackendTask } = require('./gulpfile.backend');
+const crypto = require('crypto');
+const i18n = require('./lib/i18n');
 const replace = require('gulp-replace');
 const rename = require('gulp-rename');
 const es = require('event-stream');
 const vfs = require('vinyl-fs');
-const { rimraf } = require('./lib/util');
-const { getVersion } = require('./lib/getVersion');
-const task = require('./lib/task');
-const packageJson = require('../package.json');
-const product = require('../product.json');
-const dependenciesGenerator = require('./linux/dependencies-generator');
-const debianRecommendedDependencies = require('./linux/debian/dep-lists').recommendedDeps;
-const path = require('path');
 const cp = require('child_process');
-const util = require('util');
+const dependenciesGenerator = require('./linux/dependencies-generator');
+const { recommendedDeps: debianRecommendedDependencies } = require('./linux/debian/dep-lists');
 
-const exec = util.promisify(cp.exec);
-const root = path.dirname(__dirname);
-const commit = getVersion(root);
+const repoPath = path.dirname(__dirname);
+const buildPath = (/** @type {string} */ arch) => path.join(path.dirname(repoPath), `VSCode-linux-${arch}`);
+const setupDir = (/** @type {string} */ arch) => path.join(repoPath, '.build', `linux-${arch}`, 'setup');
+const debPath = path.join(__dirname, 'linux', 'code.iss');
+const signLinuxPath = path.join(repoPath, 'build', 'azure-pipelines', 'common', 'sign-linux');
+
+const commit = getVersion(repoPath);
+const pkg = JSON.parse(fs.readFileSync(path.join(repoPath, 'package.json'), 'utf8'));
+const product = JSON.parse(fs.readFileSync(path.join(repoPath, 'product.json'), 'utf8'));
 
 const linuxPackageRevision = Math.floor(new Date().getTime() / 1000);
+const exec = promisify(cp.exec);
 
 /**
  * @param {string} arch
@@ -306,18 +319,18 @@ const BUILD_TARGETS = [
 
 BUILD_TARGETS.forEach(({ arch }) => {
 	const debArch = getDebPackageArch(arch);
-	const prepareDebTask = task.define(`vscode-linux-${arch}-prepare-deb`, task.series(rimraf(`.build/linux/deb/${debArch}`), prepareDebPackage(arch)));
+	const prepareDebTask = task.define(`vscode-linux-${arch}-prepare-deb`, task.series(util.rimraf(`.build/linux/deb/${debArch}`), prepareDebPackage(arch)));
 	gulp.task(prepareDebTask);
 	const buildDebTask = task.define(`vscode-linux-${arch}-build-deb`, buildDebPackage(arch));
 	gulp.task(buildDebTask);
 
 	const rpmArch = getRpmPackageArch(arch);
-	const prepareRpmTask = task.define(`vscode-linux-${arch}-prepare-rpm`, task.series(rimraf(`.build/linux/rpm/${rpmArch}`), prepareRpmPackage(arch)));
+	const prepareRpmTask = task.define(`vscode-linux-${arch}-prepare-rpm`, task.series(util.rimraf(`.build/linux/rpm/${rpmArch}`), prepareRpmPackage(arch)));
 	gulp.task(prepareRpmTask);
 	const buildRpmTask = task.define(`vscode-linux-${arch}-build-rpm`, buildRpmPackage(arch));
 	gulp.task(buildRpmTask);
 
-	const prepareSnapTask = task.define(`vscode-linux-${arch}-prepare-snap`, task.series(rimraf(`.build/linux/snap/${arch}`), prepareSnapPackage(arch)));
+	const prepareSnapTask = task.define(`vscode-linux-${arch}-prepare-snap`, task.series(util.rimraf(`.build/linux/snap/${arch}`), prepareSnapPackage(arch)));
 	gulp.task(prepareSnapTask);
 	const buildSnapTask = task.define(`vscode-linux-${arch}-build-snap`, task.series(prepareSnapTask, buildSnapPackage(arch)));
 	gulp.task(buildSnapTask);

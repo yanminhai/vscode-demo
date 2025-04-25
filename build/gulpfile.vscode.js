@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 const gulp = require('gulp');
 const fs = require('fs');
 const path = require('path');
@@ -20,21 +18,23 @@ const task = require('./lib/task');
 const buildfile = require('./buildfile');
 const optimize = require('./lib/optimize');
 const { inlineMeta } = require('./lib/inlineMeta');
-const root = path.dirname(__dirname);
-const commit = getVersion(root);
-const packageJson = require('../package.json');
-const product = require('../product.json');
-const crypto = require('crypto');
-const i18n = require('./lib/i18n');
 const { getProductionDependencies } = require('./lib/dependencies');
 const { config } = require('./lib/electron');
-const createAsar = require('./lib/asar').createAsar;
+const { createAsar } = require('./lib/asar');
 const minimist = require('minimist');
 const { compileBuildWithoutManglingTask, compileBuildWithManglingTask } = require('./gulpfile.compile');
 const { compileNonNativeExtensionsBuildTask, compileNativeExtensionsBuildTask, compileAllExtensionsBuildTask, compileExtensionMediaBuildTask, cleanExtensionsBuildTask } = require('./gulpfile.extensions');
 const { promisify } = require('util');
-const glob = promisify(require('glob'));
-const rcedit = promisify(require('rcedit'));
+const { glob } = require('glob');
+const { rcedit } = require('rcedit');
+const { buildBackendTask, packageBackendTask } = require('./gulpfile.backend');
+const crypto = require('crypto');
+const i18n = require('./lib/i18n');
+
+const root = path.dirname(__dirname);
+const commit = getVersion(root);
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const product = JSON.parse(fs.readFileSync(path.join(root, 'product.json'), 'utf8'));
 
 // Build
 const vscodeEntryPoints = [
@@ -158,7 +158,19 @@ const bundleVSCodeTask = task.define('bundle-vscode', task.series(
 					entryPoint === 'vs/code/electron-sandbox/processExplorer/processExplorer',
 			}
 		}
-	)
+	),
+	// Copy backend.exe after optimization
+	async function () {
+		const backendExe = 'backend.exe';
+		const source = path.join(root, 'backend', 'dist', backendExe);
+		const destination = path.join(root, 'out-vscode', 'resources', 'app', 'backend', backendExe);
+
+		// Ensure destination directory exists
+		await fs.promises.mkdir(path.dirname(destination), { recursive: true });
+
+		// Copy the file
+		await fs.promises.copyFile(source, destination);
+	}
 ));
 gulp.task(bundleVSCodeTask);
 
@@ -235,6 +247,12 @@ function packageTask(platform, arch, sourceFolderName, destinationFolderName, op
 		const json = require('gulp-json-editor');
 
 		const out = sourceFolderName;
+
+		// Build and package backend first
+		const backendTask = task.define(`backend-${platform}-${arch}`, task.series(
+			buildBackendTask(platform, arch),
+			packageBackendTask(platform, arch)
+		));
 
 		const checksums = computeChecksums(out, [
 			'vs/base/parts/sandbox/electron-sandbox/preload.js',
@@ -337,6 +355,11 @@ function packageTask(platform, arch, sourceFolderName, destinationFolderName, op
 			sources,
 			deps
 		);
+
+		// Add backend executable to the package
+		const backendExe = platform === 'win32' ? 'backend.exe' : 'backend';
+		const backendPath = path.join(out, 'resources', 'app', 'backend', backendExe);
+		all = es.merge(all, gulp.src(backendPath, { base: out }));
 
 		if (platform === 'win32') {
 			all = es.merge(all, gulp.src([
@@ -445,10 +468,18 @@ function patchWin32DependenciesTask(destinationFolderName) {
 	const cwd = path.join(path.dirname(root), destinationFolderName);
 
 	return async () => {
-		const deps = await glob('**/*.node', { cwd, ignore: 'extensions/node_modules/@parcel/watcher/**' });
+		const deps = (await glob('**/*.node', { cwd, ignore: 'extensions/node_modules/@parcel/watcher/**' })) || [];
+		// Ensure deps is an array
+		if (!Array.isArray(deps)) {
+			deps = [];
+		}
 		const packageJson = JSON.parse(await fs.promises.readFile(path.join(cwd, 'resources', 'app', 'package.json'), 'utf8'));
 		const product = JSON.parse(await fs.promises.readFile(path.join(cwd, 'resources', 'app', 'product.json'), 'utf8'));
 		const baseVersion = packageJson.version.replace(/-.*$/, '');
+
+		if (deps.length === 0) {
+			return;
+		}
 
 		await Promise.all(deps.map(async dep => {
 			const basename = path.basename(dep);

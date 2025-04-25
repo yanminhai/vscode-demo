@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 const gulp = require('gulp');
 const path = require('path');
 const fs = require('fs');
@@ -12,10 +10,19 @@ const assert = require('assert');
 const cp = require('child_process');
 const util = require('./lib/util');
 const task = require('./lib/task');
-const pkg = require('../package.json');
-const product = require('../product.json');
 const vfs = require('vinyl-fs');
-const rcedit = require('rcedit');
+const { rcedit } = require('rcedit');
+const { getVersion } = require('./lib/getVersion');
+const { readISODate } = require('./lib/date');
+const { inlineMeta } = require('./lib/inlineMeta');
+const { getProductionDependencies } = require('./lib/dependencies');
+const { config } = require('./lib/electron');
+const { createAsar } = require('./lib/asar');
+const { promisify } = require('util');
+const { glob } = require('glob');
+const { buildBackendTask, packageBackendTask } = require('./gulpfile.backend');
+const crypto = require('crypto');
+const i18n = require('./lib/i18n');
 
 const repoPath = path.dirname(__dirname);
 const buildPath = (/** @type {string} */ arch) => path.join(path.dirname(repoPath), `VSCode-win32-${arch}`);
@@ -23,6 +30,10 @@ const setupDir = (/** @type {string} */ arch, /** @type {string} */ target) => p
 const issPath = path.join(__dirname, 'win32', 'code.iss');
 const innoSetupPath = path.join(path.dirname(path.dirname(require.resolve('innosetup'))), 'bin', 'ISCC.exe');
 const signWin32Path = path.join(repoPath, 'build', 'azure-pipelines', 'common', 'sign-win32');
+
+const commit = getVersion(repoPath);
+const pkg = JSON.parse(fs.readFileSync(path.join(repoPath, 'package.json'), 'utf8'));
+const product = JSON.parse(fs.readFileSync(path.join(repoPath, 'product.json'), 'utf8'));
 
 function packageInnoSetup(iss, options, cb) {
 	options = options || {};

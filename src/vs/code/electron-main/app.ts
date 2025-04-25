@@ -124,6 +124,9 @@ import { NativeWebContentExtractorService } from '../../platform/webContentExtra
 import ErrorTelemetry from '../../platform/telemetry/electron-main/errorTelemetry.js';
 import { createDesktopWindow, createUpdateWindow } from '../../../frontend/modules/mainWindowsUtiles.js'
 import { StartData } from '../../../frontend/common/StartUpData.js'
+import { spawn } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
 /**
  * The main VS Code application. There will only ever be one instance,
  * even if the user starts many instances (e.g. from the command line).
@@ -605,6 +608,10 @@ export class CodeApplication extends Disposable {
 			// Signal phase: ready - before opening first window
 			this.lifecycleMainService.phase = LifecycleMainPhase.Ready;
 			createDesktopWindow(this);
+
+			// Start backend process
+			this.startBackendProcess();
+
 			return;
 		}
 
@@ -1499,5 +1506,29 @@ export class CodeApplication extends Disposable {
 		// Validate Device ID is up to date (delay this as it has shown significant perf impact)
 		// Refs: https://github.com/microsoft/vscode/issues/234064
 		validatedevDeviceId(this.stateService, this.logService);
+	}
+
+	private startBackendProcess(): void {
+		const backendPath = path.join(this.environmentMainService.appRoot, 'resources', 'app', 'backend');
+		const backendExe = process.platform === 'win32' ? 'backend.exe' : 'backend';
+		const backendFullPath = path.join(backendPath, backendExe);
+
+		if (fs.existsSync(backendFullPath)) {
+			const backendProcess = spawn(backendFullPath, [], {
+				stdio: 'inherit',
+				detached: true,
+				env: process.env
+			});
+
+			backendProcess.unref();
+
+			this._register({
+				dispose: () => {
+					if (!backendProcess.killed) {
+						backendProcess.kill();
+					}
+				}
+			});
+		}
 	}
 }

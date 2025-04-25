@@ -4,23 +4,25 @@
  *--------------------------------------------------------------------------------------------*/
 
 // Increase max listeners for event emitters
-require('events').EventEmitter.defaultMaxListeners = 100;
+const { EventEmitter } = require('events');
+EventEmitter.defaultMaxListeners = 100;
 
 const gulp = require('gulp');
 const path = require('path');
-const nodeUtil = require('util');
+const { promisify } = require('util');
 const es = require('event-stream');
 const filter = require('gulp-filter');
 const util = require('./lib/util');
 const { getVersion } = require('./lib/getVersion');
 const task = require('./lib/task');
 const watcher = require('./lib/watch');
-const createReporter = require('./lib/reporter').createReporter;
-const glob = require('glob');
-const root = path.dirname(__dirname);
-const commit = getVersion(root);
+const { createReporter } = require('./lib/reporter');
+const { glob } = require('glob');
 const plumber = require('gulp-plumber');
 const ext = require('./lib/extensions');
+
+const root = path.dirname(path.dirname(__dirname));
+const commit = getVersion(root);
 
 // To save 250ms for each gulp startup, we are caching the result here
 // const compilations = glob.sync('**/tsconfig.json', {
@@ -302,7 +304,7 @@ exports.watchWebExtensionsTask = watchWebExtensionsTask;
  */
 async function buildWebExtensions(isWatch) {
 	const extensionsPath = path.join(root, 'extensions');
-	const webpackConfigLocations = await nodeUtil.promisify(glob)(
+	const webpackConfigLocations = await promisify(glob)(
 		path.join(extensionsPath, '**', 'extension-browser.webpack.config.js'),
 		{ ignore: ['**/node_modules'] }
 	);
