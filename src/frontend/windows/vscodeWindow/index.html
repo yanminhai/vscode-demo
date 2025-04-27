@@ -135,6 +135,10 @@
 				<button id="closeWindow">
 					关闭编辑器
 				</button>
+				<button id="exitBtn">
+					关闭进程
+				</button>
+
 				<!-- <label class="switch">
 					<input type="checkbox" id="toggle">
 					<span class="slider round"></span>
@@ -163,32 +167,46 @@
 //   feedbackPopover.value = data
 // })
 		// 安全访问方式
-window.electronAPI?.onMessage('selected-directory',(event, path) => {
-  console.log('Received path:', path)
-  			if (path) {
-                selectedFolderPath = path;
-				type="folder"
-                document.getElementById('pathDisplay').textContent =
-                    `已选择文件夹：${selectedFolderPath}`;
-            }
-})
-window.electronAPI?.onMessage('selected-File',(event, path) => {
-  console.log('Received File path:', path)
-  			if (path) {
-				type="file"
-                selectedFolderPath = path;
-                document.getElementById('pathDisplay').textContent =
-                    `已选择文件：${selectedFolderPath}`;
-            }
-})
+		window.electronAPI?.onMessage('selected-directory',(event, path) => {
+		console.log('Received path:', path)
+					if (path) {
+						selectedFolderPath = path;
+						type="folder"
+						document.getElementById('pathDisplay').textContent =
+							`已选择文件夹：${selectedFolderPath}`;
+					}
+		})
+		window.electronAPI?.onMessage('selected-File',(event, path) => {
+		console.log('Received File path:', path)
+					if (path) {
+						type="file"
+						selectedFolderPath = path;
+						document.getElementById('pathDisplay').textContent =
+							`已选择文件：${selectedFolderPath}`;
+					}
+		})
 
+			window.electronAPI?.onMessage('log-from-main',(event, data) => {
+				// console.log('Received path:', path)
+				// 	if (path) {
+				// 		selectedFolderPath = path;
+				// 		type="folder"
+				// 		document.getElementById('pathDisplay').textContent =
+				// 			`已选择文件夹：${selectedFolderPath}`;
+				// 	}
+				console.log('log-from-main:', data)
+			})
      // 选择文件夹按钮点击事件 opem-openFile-dialog
-	 document.getElementById('selectFolderBtn').addEventListener('click', () => {
+		document.getElementById('selectFolderBtn').addEventListener('click', () => {
 		window.electronAPI?.sendMessage('open-directory-dialog',{})
         });
 		document.getElementById('selectFileBtn').addEventListener('click', () => {
 		window.electronAPI?.sendMessage('opem-openFile-dialog',{})
         });
+		document.getElementById('exitBtn').addEventListener('click', () => {
+		window.electronAPI?.sendMessage('exec-exit',{})
+        });
+
        // 启动按钮点击事件
 	   document.getElementById('startBtn').addEventListener('click', () => {
             if (selectedFolderPath) {

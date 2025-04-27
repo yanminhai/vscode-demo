@@ -16,13 +16,16 @@ import { runupdate, execExeFile } from '../appUpdate/appUpdate.js';
 import { CodeApplication } from '../../vs/code/electron-main/app.js';
 import { boolean } from '../../vs/editor/common/config/editorOptions.js';
 import { StartData } from '../common/StartUpData.js'
+import { exec, execFile, spawn } from 'child_process';
+import { ChildProcess } from 'child_process';
+import { error } from 'console';
 let desktopWindow: BrowserWindow | null = null;
 let updateWindow: BrowserWindow | null = null;
 let mCodeApp: CodeApplication | null = null;
 let isQuitting: boolean = false;
 let vscodeWindow: BrowserWindow;
 const env_test: boolean = true;
-
+let backendProcess: ChildProcess | null = null;
 interface IPCChannels {
 	'login': (event: IpcMainEvent, data: LoginData) => void;
 }
@@ -94,7 +97,7 @@ export const createDesktopWindow = (codeApp: CodeApplication): void => {
 		setupIPC();
 		desktopWindow.setMaximizable(true)
 		// desktopWindow?.webContents?.reloadIgnoringCache();
-		desktopWindow.loadURL("http://localhost:5173/");
+		// desktopWindow.loadURL("http://localhost:5173/");
 
 		// desktopWindow.loadFile(FileAccess.asFileUri('frontend/windows/updateWindow').fsPath);
 		// 获取当前文件的 __dirname
@@ -105,7 +108,7 @@ export const createDesktopWindow = (codeApp: CodeApplication): void => {
 		// desktopWindow.loadURL(`file://${path.join(__dirname, '../windows/updateWindows/index.html')}`);
 
 		// desktopWindow.loadFile(path.join(__dirname, '../windows/updateWindows/index.html'));
-		// desktopWindow.loadURL(FileAccess.asBrowserUri(`frontend/windows/vscodeWindow/index.html`).toString(true));
+		desktopWindow.loadURL(FileAccess.asBrowserUri(`frontend/windows/vscodeWindow/index.html`).toString(true));
 		// desktopWindow.maximize();
 		// 处理显示变化
 		screen.on('display-metrics-changed', () => {
@@ -117,12 +120,13 @@ export const createDesktopWindow = (codeApp: CodeApplication): void => {
 		// 添加窗口关闭处理
 		desktopWindow.on('closed', () => {
 			desktopWindow = null;
+			execExit();
 		});
 		openClient();
 	} catch (error) {
 		console.error('窗口初始化失败:', error instanceof Error ? error.message : String(error));
 	}
-	// desktopWindow.webContents.openDevTools();
+	desktopWindow.webContents.openDevTools();
 
 	app.on('before-quit', async (event: Event) => {
 		if (!isQuitting) {
@@ -137,6 +141,7 @@ export const createDesktopWindow = (codeApp: CodeApplication): void => {
 
 	app.on('quit', () => {
 		log.info(`app quit`);
+		execExit();
 		execExeFile();
 	});
 };
@@ -170,9 +175,73 @@ export const createUpdateWindow = (): void => {
 	}
 };
 
+export const startBackendProcess = (rootPath: string): ChildProcess | undefined => {
+	let platform = "";
+	switch (process.platform) {
+		case 'win32':
+			platform = "win32";
+			break;
+		case 'darwin':
+			platform = "darwin";
+			break;
+		case 'linux':
+			platform = "linux";
+			break;
+	}
+	windowLog(process.platform)
+	let backendPath;
+	backendPath = path.join(rootPath, 'resources', platform, 'backend');
+	let buildPath = path.join(rootPath, 'resources', "app", 'backend');
 
+	if (fs.existsSync(buildPath)) {
+		backendPath = buildPath;
+	}
+	const backendFullPath = path.join(backendPath, 'backend.exe');
+	console.log("Backend path===: " + backendFullPath + "==");
+	windowLog(backendFullPath)
+	if (fs.existsSync(backendFullPath)) {
+		backendProcess = execFile(backendFullPath, [], (error, stdout, stderr) => {
+			if (error) {
+				console.error(`启动后端进程出错: ${error}`);
+				windowLog(`启动后端进程出错: ${error}`)
+			} else {
+				console.log(`后端进程启动成功: ${stdout}`);
+				windowLog(`后端进程启动成功: ${stdout}`)
+			}
+		});
 
+		backendProcess.unref();
+		return backendProcess;
+	} else {
+		windowLog(backendFullPath + "路径不存在")
+		return undefined;
+	}
+}
+export const windowLog = (message: string): void => {
+	desktopWindow?.webContents.send('log-from-main', message);
 
+};
+export const execExit = (): void => {
+	if (backendProcess) {
+		let command = "taskkill /f /im backend.exe";
+		exec(command, (error, stdout, stderr) => {
+
+			if (error) {
+				console.error(`Error terminating process: ${error.message}`);
+				return;
+			}
+			if (stderr) {
+				console.error(`stderr: ${stderr}`);
+				return;
+			}
+			console.log(`stdout进程杀死: ${stdout}`);
+			backendProcess = null;
+		});
+	} else {
+		console.error("Backend process is not initialized.");
+		windowLog("Backend process is not initialized.");
+	}
+};
 // 配置日志文件
 try {
 	// 获取类型安全的 transports.file
@@ -271,6 +340,7 @@ const setupIPC = (): void => {
 	ipcMain.on('opem-openFile-dialog' as keyof IPCChannels, openFile as any);
 	ipcMain.on('isShow-vscode' as keyof IPCChannels, isVSCodeShow as any);
 	ipcMain.on('close-window' as keyof IPCChannels, handleCloseWindow as any);
+	ipcMain.on('exec-exit' as keyof IPCChannels, execExit as any)
 
 };
 

@@ -468,7 +468,7 @@ function patchWin32DependenciesTask(destinationFolderName) {
 	const cwd = path.join(path.dirname(root), destinationFolderName);
 
 	return async () => {
-		const deps = (await glob('**/*.node', { cwd, ignore: 'extensions/node_modules/@parcel/watcher/**' })) || [];
+		let deps = (await glob('**/*.node', { cwd, ignore: 'extensions/node_modules/@parcel/watcher/**' })) || [];
 		// Ensure deps is an array
 		if (!Array.isArray(deps)) {
 			deps = [];

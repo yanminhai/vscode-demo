@@ -20,7 +20,7 @@ const BACKEND_ROOT = path.join(REPO_ROOT, 'backend');
 
 function buildBackendTask(platform, arch) {
 	return async function () {
-		const pyinstaller = 'pyinstaller';
+		const pyinstaller = 'poetry run pyinstaller'; // 修改这一行
 		const specFile = path.join(BACKEND_ROOT, 'backend.spec');
 		const distDir = path.join(BACKEND_ROOT, 'dist');
 		const buildDir = path.join(BACKEND_ROOT, 'build');
@@ -48,7 +48,8 @@ function buildBackendTask(platform, arch) {
 				if (code === 0) {
 					resolve();
 				} else {
-					reject(new Error(`PyInstaller exited with code ${code}`));
+					console.error(`PyInstaller 退出代码为 ${code}`);
+					reject(new Error(`PyInstaller 退出代码为 ${code}`));
 				}
 			});
 		});
@@ -59,7 +60,7 @@ function packageBackendTask(platform, arch) {
 	return async function () {
 		const backendExe = platform === 'win32' ? 'backend.exe' : 'backend';
 		const source = path.join(BACKEND_ROOT, 'dist', backendExe);
-		const destination = path.join(REPO_ROOT, 'out-vscode', 'resources', 'app', 'backend');
+		const destination = path.join(REPO_ROOT, 'resources', platform, 'backend');
 
 		// Ensure destination directory exists
 		await fse.ensureDir(path.dirname(destination));

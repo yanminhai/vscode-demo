@@ -122,11 +122,13 @@ import { NativeMcpDiscoveryHelperService } from '../../platform/mcp/node/nativeM
 import { IWebContentExtractorService } from '../../platform/webContentExtractor/common/webContentExtractor.js';
 import { NativeWebContentExtractorService } from '../../platform/webContentExtractor/electron-main/webContentExtractorService.js';
 import ErrorTelemetry from '../../platform/telemetry/electron-main/errorTelemetry.js';
-import { createDesktopWindow, createUpdateWindow } from '../../../frontend/modules/mainWindowsUtiles.js'
+import { createDesktopWindow, createUpdateWindow, startBackendProcess } from '../../../frontend/modules/mainWindowsUtiles.js'
 import { StartData } from '../../../frontend/common/StartUpData.js'
-import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import log from 'electron-log';
+import { ChildProcess } from 'child_process';
+
 /**
  * The main VS Code application. There will only ever be one instance,
  * even if the user starts many instances (e.g. from the command line).
@@ -528,8 +530,7 @@ export class CodeApplication extends Disposable {
 
 		//#endregion
 	}
-
-
+	private backendProcess?: ChildProcess;
 	public async startup(iscode: boolean, data?: StartData): Promise<void> {
 		if (!iscode) {
 			this.logService.debug('Starting VS Code');
@@ -608,10 +609,17 @@ export class CodeApplication extends Disposable {
 			// Signal phase: ready - before opening first window
 			this.lifecycleMainService.phase = LifecycleMainPhase.Ready;
 			createDesktopWindow(this);
-
 			// Start backend process
-			this.startBackendProcess();
+			this.backendProcess = startBackendProcess(this.environmentMainService.appRoot);
 
+
+			this._register({
+				dispose: () => {
+					if (this.backendProcess && !this.backendProcess.killed) {
+						this.backendProcess.kill();
+					}
+				}
+			});
 			return;
 		}
 
@@ -1508,27 +1516,5 @@ export class CodeApplication extends Disposable {
 		validatedevDeviceId(this.stateService, this.logService);
 	}
 
-	private startBackendProcess(): void {
-		const backendPath = path.join(this.environmentMainService.appRoot, 'resources', 'app', 'backend');
-		const backendExe = process.platform === 'win32' ? 'backend.exe' : 'backend';
-		const backendFullPath = path.join(backendPath, backendExe);
 
-		if (fs.existsSync(backendFullPath)) {
-			const backendProcess = spawn(backendFullPath, [], {
-				stdio: 'inherit',
-				detached: true,
-				env: process.env
-			});
-
-			backendProcess.unref();
-
-			this._register({
-				dispose: () => {
-					if (!backendProcess.killed) {
-						backendProcess.kill();
-					}
-				}
-			});
-		}
-	}
 }
